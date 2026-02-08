@@ -1,0 +1,158 @@
+# Drug Discovery Demo Configuration
+# This file contains hyperparameters and settings for the ML pipeline
+
+# Database Configuration
+database:
+  catalog: "main"  # Change to your Unity Catalog name if using UC
+  schema: "drug_discovery"
+  checkpoint_location: "/tmp/drug_discovery_checkpoints"
+
+# Data Generation
+data_generation:
+  n_molecules: 50000  # Number of synthetic molecules to generate
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+
+# Molecular Descriptors
+descriptors:
+  # Basic descriptors to calculate
+  basic:
+    - molecular_weight
+    - logp
+    - tpsa
+    - num_h_donors
+    - num_h_acceptors
+    - num_rotatable_bonds
+    - num_aromatic_rings
+    - num_heteroatoms
+  
+  # Morgan fingerprint settings
+  fingerprints:
+    radius: 2
+    n_bits: 2048
+    use_features: true
+    use_chirality: false
+
+# Feature Engineering
+features:
+  version: "v1.0"
+  cache_features: true
+  feature_store_enabled: false  # Set to true to use Databricks Feature Store
+
+# Model Training - Toxicity Classification
+toxicity_model:
+  algorithm: "random_forest"  # Options: random_forest, xgboost, gradient_boosting
+  
+  random_forest:
+    n_estimators: 100
+    max_depth: 20
+    min_samples_split: 5
+    min_samples_leaf: 2
+    class_weight: "balanced"
+    random_state: 42
+    n_jobs: -1
+  
+  xgboost:
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    scale_pos_weight: 1
+    random_state: 42
+  
+  # Hyperparameter tuning
+  hyperopt:
+    enabled: true
+    max_evals: 20
+    parallelism: 4
+    search_space:
+      max_depth: [5, 10, 15, 20, 25]
+      n_estimators: [50, 100, 200]
+      min_samples_split: [2, 5, 10]
+
+# Model Training - Solubility Regression
+solubility_model:
+  algorithm: "gradient_boosting"  # Options: gradient_boosting, random_forest, xgboost
+  
+  gradient_boosting:
+    n_estimators: 150
+    max_depth: 8
+    learning_rate: 0.05
+    subsample: 0.8
+    min_samples_split: 5
+    min_samples_leaf: 2
+    random_state: 42
+  
+  random_forest:
+    n_estimators: 100
+    max_depth: 15
+    min_samples_split: 5
+    min_samples_leaf: 2
+    random_state: 42
+  
+  xgboost:
+    n_estimators: 150
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    random_state: 42
+
+# MLflow Configuration
+mlflow:
+  experiment_name: "/Users/drug_discovery_demo"  # Update with your path
+  tracking_uri: "databricks"
+  model_registry_enabled: true
+  autolog_enabled: true
+  
+  # Model registration
+  registry:
+    toxicity_model_name: "toxicity_predictor"
+    solubility_model_name: "solubility_predictor"
+
+# Batch Inference
+inference:
+  batch_size: 10000  # Number of molecules to score per batch
+  parallelism: 8     # Number of parallel tasks
+  
+  # Filtering thresholds
+  thresholds:
+    toxicity_confidence: 0.7  # Minimum confidence for non-toxic prediction
+    solubility_min: -3.0      # Minimum LogS value (higher = more soluble)
+    composite_score_min: 0.6  # Minimum composite score for lead candidates
+
+# Visualization
+visualization:
+  plot_style: "seaborn"
+  color_palette: "Set2"
+  figure_size: [12, 8]
+  dpi: 100
+  
+  # Molecule rendering
+  molecule_img_size: [300, 300]
+  highlight_color: [0.8, 0.8, 0.0]
+
+# Performance Monitoring
+monitoring:
+  enable_profiling: false
+  log_feature_importance: true
+  track_data_drift: false
+  alert_on_poor_performance: false
+
+# Spark Configuration (Optional tuning)
+spark:
+  # Uncomment and adjust based on your cluster
+  # executor_memory: "8g"
+  # executor_cores: 4
+  # driver_memory: "4g"
+  shuffle_partitions: 200
+
+# Advanced Options
+advanced:
+  enable_gpu_acceleration: false  # Requires GPU-enabled cluster
+  use_delta_sharing: false
+  enable_automl: false  # Use Databricks AutoML
+  custom_metrics_enabled: false
