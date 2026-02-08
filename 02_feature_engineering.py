@@ -185,8 +185,7 @@ for field in descriptor_schema.fields:
 
 df_with_descriptors = df_with_descriptors.drop("descriptors")
 
-# Cache for performance
-df_with_descriptors.cache()
+# Remove .cache() call (not supported on serverless)
 count = df_with_descriptors.count()
 
 print(f"✓ Calculated descriptors for {count:,} molecules")
