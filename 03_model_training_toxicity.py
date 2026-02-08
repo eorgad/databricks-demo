@@ -25,47 +25,59 @@
 
 # COMMAND ----------
 
-# Import libraries
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from datetime import datetime
-
-# ML libraries
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    roc_auc_score, roc_curve, confusion_matrix, classification_report
-)
-from sklearn.model_selection import cross_val_score
-import xgboost as xgb
-
-# MLflow
-import mlflow
-import mlflow.sklearn
-import mlflow.xgboost
-from mlflow.models.signature import infer_signature
-
-# Hyperopt for tuning
-from hyperopt import fmin, tpe, hp, SparkTrials, STATUS_OK, space_eval
-
-# Spark
-from pyspark.sql.functions import col
-import warnings
-warnings.filterwarnings('ignore')
-
-print("✓ Libraries imported successfully")
+# MAGIC %pip install hyperopt
 
 # COMMAND ----------
 
+# DBTITLE 1,Import libraries
+# MAGIC %pip install xgboost
+# MAGIC # Import libraries
+# MAGIC import pandas as pd
+# MAGIC import numpy as np
+# MAGIC import matplotlib.pyplot as plt
+# MAGIC import seaborn as sns
+# MAGIC from datetime import datetime
+# MAGIC
+# MAGIC # ML libraries
+# MAGIC from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+# MAGIC from sklearn.metrics import (
+# MAGIC     accuracy_score, precision_score, recall_score, f1_score,
+# MAGIC     roc_auc_score, roc_curve, confusion_matrix, classification_report
+# MAGIC )
+# MAGIC from sklearn.model_selection import cross_val_score
+# MAGIC import xgboost as xgb
+# MAGIC
+# MAGIC # MLflow
+# MAGIC import mlflow
+# MAGIC import mlflow.sklearn
+# MAGIC import mlflow.xgboost
+# MAGIC from mlflow.models.signature import infer_signature
+# MAGIC
+# MAGIC # Hyperopt for tuning
+# MAGIC from hyperopt import fmin, tpe, hp, SparkTrials, STATUS_OK, space_eval
+# MAGIC
+# MAGIC # Spark
+# MAGIC from pyspark.sql.functions import col
+# MAGIC import warnings
+# MAGIC warnings.filterwarnings('ignore')
+# MAGIC
+# MAGIC print("✓ Libraries imported successfully")
+
+# COMMAND ----------
+
+import mlflow
+mlflow.set_registry_uri("databricks-uc")
+
+# COMMAND ----------
+
+# DBTITLE 1,Cell 5
 # Configuration
 CATALOG = "main"
 SCHEMA = "drug_discovery"
 FEATURE_TABLE = f"{CATALOG}.{SCHEMA}.molecular_features"
 
 # MLflow experiment
-EXPERIMENT_NAME = "/Users/your-email@company.com/drug_discovery_toxicity"
+EXPERIMENT_NAME = "/Users/eran.orgad@gmail.com/drug_discovery_toxicity"
 mlflow.set_experiment(EXPERIMENT_NAME)
 
 print(f"Configuration:")
@@ -319,8 +331,9 @@ print("This will run 20 trials in parallel...\n")
 
 with mlflow.start_run(run_name="Hyperopt_Tuning"):
     
-    # Use SparkTrials for parallel tuning
-    spark_trials = SparkTrials(parallelism=4)
+    # Use standard Trials for tuning (SparkTrials not supported on serverless)
+    from hyperopt import Trials
+    trials = Trials()
     
     # Run optimization
     best_params = fmin(
@@ -328,7 +341,7 @@ with mlflow.start_run(run_name="Hyperopt_Tuning"):
         space=search_space,
         algo=tpe.suggest,
         max_evals=20,
-        trials=spark_trials
+        trials=trials
     )
     
     # Convert index choices back to actual values
@@ -341,6 +354,7 @@ with mlflow.start_run(run_name="Hyperopt_Tuning"):
     
     # Log best parameters
     mlflow.log_params(best_params_actual)
+
 
 # COMMAND ----------
 
@@ -397,12 +411,12 @@ with mlflow.start_run(run_name="Optimized_RandomForest") as run:
     
     # Log model with signature
     signature = infer_signature(X_train, y_train_pred)
-    mlflow.sklearn.log_model(
-        final_model, 
-        "model",
-        signature=signature,
-        registered_model_name="toxicity_predictor"
-    )
+    # mlflow.sklearn.log_model(
+    #    final_model, 
+    #    "model",
+    #    signature=signature,
+    #    registered_model_name="toxicity_predictor"
+    # )
     
     # Save run ID for later use
     run_id = run.info.run_id
